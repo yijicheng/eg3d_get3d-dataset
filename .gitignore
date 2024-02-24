@@ -25,3 +25,7 @@ vids/
 stylegan3/results
 eg3d/results
 eg3d_results
+
+eg3d/shapenet_chair_render_512
+eg3d/training-runs
+eg3d/labels_shapenet_chair.npz
