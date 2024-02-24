@@ -58,6 +58,7 @@ class Dataset(torch.utils.data.Dataset):
             if self._raw_labels.dtype == np.int64:
                 assert self._raw_labels.ndim == 1
                 assert np.all(self._raw_labels >= 0)
+            self._raw_labels_std = self._raw_labels.std(0)
         return self._raw_labels
 
     def close(self):  # to be overridden by subclass
@@ -105,6 +106,9 @@ class Dataset(torch.utils.data.Dataset):
         d.xflip = (int(self._xflip[idx]) != 0)
         d.raw_label = self._get_raw_labels()[d.raw_idx].copy()
         return d
+
+    def get_label_std(self):
+        return self._raw_labels_std
 
     @property
     def name(self):
@@ -349,15 +353,20 @@ class ImageFolderDataset(Dataset):
             )
 
             for fname in tqdm.tqdm(self._image_fnames):
+                fname_list = fname.split('/')
+                img_idx = int(fname_list[-1].split('.')[0])
+                obj_idx = fname_list[-2]
+                syn_idx = fname_list[-3]
 
                 with open(os.path.join(self.root, obj_idx, 'transforms.json')) as f:
-                    pose = np.arrat(json.load(f)["frames"][int(fname.split("/")[-1].split(".")[0])]["transform_matrix"])
+                    pose = np.array(json.load(f)["frames"][int(fname.split("/")[-1].split(".")[0])]["transform_matrix"])
 
 
-                labels = np.concatenate([pose.reshape(-1), intrinsics.reshape(-1)])
-                labels = labels.astype({1: np.int64, 2: np.float32}[labels.ndim])
-
+                label = np.concatenate([pose.reshape(-1), intrinsics.reshape(-1)])
                 labels.append(label)
+
+            labels = np.array(labels)
+            labels = labels.astype({1: np.int64, 2: np.float32}[labels.ndim])
             np.savez(os.path.join(self.camera_root, 'labels_shapenet_chair.npz'), labels=labels)
             
         return labels
